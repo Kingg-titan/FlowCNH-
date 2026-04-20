@@ -5,6 +5,7 @@ import { useAccount, useReadContracts, useReadContract } from "wagmi";
 import { StreamCard } from "@/components/StreamCard";
 import { VAULT_ABI, VAULT_ADDRESS } from "@/lib/contracts";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { HAS_OFFICIAL_AXCNH_CONFIG, STREAM_ASSET_LABEL } from "@/lib/demoConfig";
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
@@ -90,6 +91,17 @@ export default function Dashboard() {
             ? `${sentStreams.length} sent, ${receivedStreams.length} received`
             : "No streams yet"}
         </p>
+        <p className="mt-3 max-w-3xl text-sm text-gray-500">
+          Demo tip: open this page in two windows, one with the employer wallet
+          and one with the worker wallet. The worker&apos;s claimable {STREAM_ASSET_LABEL}
+          should visibly tick up every second during an active stream.
+        </p>
+        {!HAS_OFFICIAL_AXCNH_CONFIG && (
+          <p className="mt-2 max-w-3xl text-sm text-yellow-200">
+            This deployment is still pointed at a testnet demo asset rather than
+            the official AxCNH mainnet contract.
+          </p>
+        )}
       </div>
 
       {myStreams.length > 0 ? (

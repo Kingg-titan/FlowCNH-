@@ -10,9 +10,15 @@ import {
 import { parseUnits, formatUnits } from "viem";
 import { ROUTER_ABI, ROUTER_ADDRESS, ERC20_ABI } from "@/lib/contracts";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import {
+  CONFIGURED_STREAM_ASSET,
+  HAS_OFFICIAL_AXCNH_CONFIG,
+  STREAM_ASSET_LABEL,
+  YIELD_PHASE_LABEL,
+} from "@/lib/demoConfig";
 
-const AXCNH_TESTNET = (process.env.NEXT_PUBLIC_AXCNH_ADDRESS ??
-  "0x0000000000000000000000000000000000000000") as `0x${string}`;
+const STREAM_ASSET = CONFIGURED_STREAM_ASSET;
+const YIELD_ENABLED_IN_UI = false;
 
 // Conflux eSpace gas estimation is unreliable — use fixed high limits
 const GAS_APPROVE = 100_000n;
@@ -26,7 +32,7 @@ export default function CreateStream() {
   const [recipient, setRecipient] = useState("");
   const [ratePerDay, setRatePerDay] = useState("");
   const [durationDays, setDurationDays] = useState("");
-  const [enableYield, setEnableYield] = useState(true);
+  const [enableYield] = useState(false);
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState("");
 
@@ -58,7 +64,7 @@ export default function CreateStream() {
   });
 
   const { data: tokenBalance, refetch: refetchBalance } = useReadContract({
-    address: AXCNH_TESTNET,
+    address: STREAM_ASSET,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: address ? [address] : undefined,
@@ -85,7 +91,7 @@ export default function CreateStream() {
           address: ROUTER_ADDRESS as `0x${string}`,
           abi: ROUTER_ABI,
           functionName: "createStream",
-          args: [p.recipient, AXCNH_TESTNET, p.ratePerSecond, p.duration, p.enableYield],
+          args: [p.recipient, STREAM_ASSET, p.ratePerSecond, p.duration, p.enableYield],
           gas: GAS_CREATE,
         },
         {
@@ -128,7 +134,7 @@ export default function CreateStream() {
     setStep("approving");
     approve(
       {
-        address: AXCNH_TESTNET,
+        address: STREAM_ASSET,
         abi: ERC20_ABI,
         functionName: "approve",
         args: [ROUTER_ADDRESS as `0x${string}`, deposit],
@@ -177,7 +183,7 @@ export default function CreateStream() {
           <h2 className="text-2xl font-bold">Stream Created!</h2>
           <p className="text-gray-400">
             Your payment stream is now active. The recipient will start accruing
-            AxCNH every second.
+            {STREAM_ASSET_LABEL} every second.
           </p>
           <div className="flex gap-4 justify-center">
             <a href="/dashboard" className="btn-primary">
@@ -209,10 +215,18 @@ export default function CreateStream() {
         Set up a real-time payment stream to a recipient
       </p>
 
+      {!HAS_OFFICIAL_AXCNH_CONFIG && (
+        <div className="card mb-6 border-yellow-500/30 bg-yellow-500/10 text-sm text-yellow-100">
+          This deployment is connected to a testnet {STREAM_ASSET_LABEL}. Until
+          an official AxCNH testnet contract is published, the live AxCNH
+          address documented by Conflux is mainnet-only.
+        </div>
+      )}
+
       {/* Balance banner */}
       <div className="card mb-6 flex items-center justify-between">
         <div>
-          <p className="text-xs text-gray-500">Your AxCNH Balance</p>
+          <p className="text-xs text-gray-500">Your {STREAM_ASSET_LABEL} Balance</p>
           <p className="text-xl font-bold">
             {tokenBalance !== undefined
               ? Number(formatUnits(tokenBalance as bigint, 18)).toLocaleString(
@@ -220,12 +234,12 @@ export default function CreateStream() {
                   { maximumFractionDigits: 2 }
                 )
               : "..."}{" "}
-            <span className="text-sm font-normal text-gray-400">AxCNH</span>
+            <span className="text-sm font-normal text-gray-400">{STREAM_ASSET_LABEL}</span>
           </p>
         </div>
         {tokenBalance !== undefined && (tokenBalance as bigint) === 0n && (
           <a href="/faucet" className="btn-secondary text-sm">
-            Get Test Tokens
+            Funding Notes
           </a>
         )}
       </div>
@@ -251,7 +265,7 @@ export default function CreateStream() {
         </div>
 
         <div>
-          <label className="label">Payment Rate (AxCNH per day)</label>
+          <label className="label">Payment Rate ({STREAM_ASSET_LABEL} per day)</label>
           <input
             type="number"
             className="input"
@@ -265,7 +279,7 @@ export default function CreateStream() {
           />
           {ratePerSecond > 0n && (
             <p className="mt-1 text-xs text-gray-500">
-              = {(Number(ratePerDay) / 86400).toFixed(8)} AxCNH/sec
+              = {(Number(ratePerDay) / 86400).toFixed(8)} {STREAM_ASSET_LABEL}/sec
             </p>
           )}
         </div>
@@ -285,18 +299,12 @@ export default function CreateStream() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="yield"
-            checked={enableYield}
-            onChange={(e) => setEnableYield(e.target.checked)}
-            disabled={busy}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-brand-600"
-          />
-          <label htmlFor="yield" className="text-sm text-gray-300">
-            Enable yield on idle balance (dForce Unitus)
-          </label>
+        <div className="rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-300">
+          <p className="font-medium text-white">dForce Yield: {YIELD_PHASE_LABEL}</p>
+          <p className="mt-1 text-gray-400">
+            Yield is intentionally disabled in the live demo until the AxCNH
+            lending route is verified end-to-end on-chain.
+          </p>
         </div>
 
         {/* Summary */}
@@ -313,7 +321,7 @@ export default function CreateStream() {
                     undefined,
                     { maximumFractionDigits: 4 }
                   )}{" "}
-                  AxCNH
+                  {STREAM_ASSET_LABEL}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -322,7 +330,7 @@ export default function CreateStream() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Yield</span>
-                <span>{enableYield ? "Enabled" : "Disabled"}</span>
+                <span>{YIELD_ENABLED_IN_UI ? "Enabled" : `${YIELD_PHASE_LABEL}`}</span>
               </div>
             </div>
           </div>

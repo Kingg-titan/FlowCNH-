@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { confluxESpaceTestnet } from "@/lib/chain";
 import { VAULT_ABI, VAULT_ADDRESS, STREAM_NFT_ABI, STREAM_NFT_ADDRESS } from "@/lib/contracts";
+import { STREAM_ASSET_LABEL, YIELD_PHASE_LABEL } from "@/lib/demoConfig";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://flowcnhxyz.vercel.app";
 
 const client = createPublicClient({
   chain: confluxESpaceTestnet,
@@ -37,16 +40,16 @@ export async function GET(
 
     return NextResponse.json({
       name: `FlowCNH Stream #${streamId.toString()}`,
-      description: `Real-time AxCNH payment stream. Rate: ${ratePerDay.toFixed(2)} AxCNH/day. Status: ${status}.`,
-      image: `https://flow-cnh.vercel.app/api/og/${tokenId}`,
-      external_url: `https://flow-cnh.vercel.app/dashboard`,
+      description: `Real-time ${STREAM_ASSET_LABEL} payment stream. Rate: ${ratePerDay.toFixed(2)} ${STREAM_ASSET_LABEL}/day. Status: ${status}. dForce yield remains ${YIELD_PHASE_LABEL}.`,
+      image: `${APP_URL}/api/og/${tokenId}`,
+      external_url: `${APP_URL}/dashboard`,
       attributes: [
         { trait_type: "Stream ID", value: streamId.toString() },
         { trait_type: "Status", value: status },
-        { trait_type: "Rate (AxCNH/day)", value: ratePerDay.toFixed(4) },
+        { trait_type: `Rate (${STREAM_ASSET_LABEL}/day)`, value: ratePerDay.toFixed(4) },
         {
           trait_type: "Yield Enabled",
-          value: (stream.yieldEnabled ?? stream[10]) ? "Yes" : "No",
+          value: (stream.yieldEnabled ?? stream[10]) ? "Yes" : YIELD_PHASE_LABEL,
         },
       ],
     });

@@ -28,7 +28,7 @@ export function Header() {
               href="/faucet"
               className="text-sm text-gray-400 transition-colors hover:text-white"
             >
-              Faucet
+              Funding
             </Link>
           </nav>
         </div>

@@ -7,9 +7,9 @@ import { Header } from "@/components/Header";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "FlowCNH — Real-Time Payment Streaming",
+  title: "FlowCNH — CNH Corridor Streaming",
   description:
-    "Programmable payment streaming on Conflux eSpace with AxCNH. Stream payments second-by-second with gasless withdrawals.",
+    "Real-time CNH corridor payment streaming on Conflux eSpace. Show balances ticking up second-by-second and keep unsupported yield claims out of the demo.",
 };
 
 export default function RootLayout({

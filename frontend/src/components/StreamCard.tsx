@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { VAULT_ABI, VAULT_ADDRESS, ROUTER_ABI, ROUTER_ADDRESS } from "@/lib/contracts";
 import { useClaimableBalance } from "@/hooks/useStreams";
+import { STREAM_ASSET_LABEL, YIELD_PHASE_LABEL } from "@/lib/demoConfig";
 import {
   formatAxCNH,
   formatRate,
@@ -32,6 +33,10 @@ interface StreamCardProps {
 
 export function StreamCard({ streamId, stream, isEmployer }: StreamCardProps) {
   const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+  const [claimableAnchor, setClaimableAnchor] = useState<{
+    amount: bigint;
+    timestamp: number;
+  } | null>(null);
   const { data: claimable, refetch } = useClaimableBalance(streamId);
 
   const { writeContract: claim, data: claimHash } = useWriteContract();
@@ -47,10 +52,24 @@ export function StreamCard({ streamId, stream, isEmployer }: StreamCardProps) {
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(Math.floor(Date.now() / 1000));
-      refetch();
     }, 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const refresh = setInterval(() => {
+      refetch();
+    }, 5000);
+    return () => clearInterval(refresh);
   }, [refetch]);
+
+  useEffect(() => {
+    if (claimable === undefined) return;
+    setClaimableAnchor({
+      amount: claimable,
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+  }, [claimable]);
 
   const progress = streamProgress(
     Number(stream.startTime),
@@ -61,6 +80,25 @@ export function StreamCard({ streamId, stream, isEmployer }: StreamCardProps) {
   const remaining = Number(stream.stopTime) - now;
   const isActive = stream.status === 0;
   const isPaused = stream.status === 1;
+  const cappedNow = Math.min(now, Number(stream.stopTime));
+
+  const displayedClaimable = useMemo(() => {
+    if (!claimableAnchor) return claimable;
+    if (!isActive) return claimableAnchor.amount;
+
+    const secondsSinceAnchor = Math.max(0, cappedNow - claimableAnchor.timestamp);
+    const remainingDeposit = stream.totalDeposited - stream.totalClaimed;
+    const liveAccrual = claimableAnchor.amount + (stream.ratePerSecond * BigInt(secondsSinceAnchor));
+    return liveAccrual > remainingDeposit ? remainingDeposit : liveAccrual;
+  }, [
+    cappedNow,
+    claimable,
+    claimableAnchor,
+    isActive,
+    stream.ratePerSecond,
+    stream.totalClaimed,
+    stream.totalDeposited,
+  ]);
 
   return (
     <div className="card space-y-4">
@@ -88,7 +126,11 @@ export function StreamCard({ streamId, stream, isEmployer }: StreamCardProps) {
         <div>
           <p className="text-xs text-gray-500">Claimable</p>
           <p className="text-lg font-semibold text-accent-green">
-            {claimable !== undefined ? formatAxCNH(claimable) : "..."} AxCNH
+            {displayedClaimable !== undefined ? formatAxCNH(displayedClaimable) : "..."}{" "}
+            {STREAM_ASSET_LABEL}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            {isActive ? "Live ticker updates every second" : "Updates from on-chain state"}
           </p>
         </div>
       </div>
@@ -119,13 +161,18 @@ export function StreamCard({ streamId, stream, isEmployer }: StreamCardProps) {
           <span>Yield enabled via dForce Unitus</span>
         </div>
       )}
+      {!stream.yieldEnabled && (
+        <div className="flex items-center gap-2 rounded-lg bg-gray-900/80 px-3 py-2 text-xs text-gray-400">
+          <span>dForce yield is currently scoped for {YIELD_PHASE_LABEL}</span>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-2 pt-2">
         {!isEmployer && (isActive || isPaused) && (
           <button
             className="btn-primary flex-1"
-            disabled={claiming || !claimable || claimable === 0n}
+            disabled={claiming || !displayedClaimable || displayedClaimable === 0n}
             onClick={() =>
               claim({
                 address: VAULT_ADDRESS as `0x${string}`,

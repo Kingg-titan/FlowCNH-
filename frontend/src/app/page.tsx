@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import {
+  HAS_OFFICIAL_AXCNH_CONFIG,
+  STREAM_ASSET_LABEL,
+  YIELD_PHASE_LABEL,
+} from "@/lib/demoConfig";
 
 export default function Home() {
   const { isConnected } = useAccount();
@@ -14,15 +19,24 @@ export default function Home() {
         Built on Conflux eSpace
       </div>
       <h1 className="mb-6 text-5xl font-bold leading-tight tracking-tight sm:text-6xl">
-        Money that moves
+        Payroll for the
         <br />
-        <span className="text-brand-500">as fast as work happens</span>
+        <span className="text-brand-500">CNH corridor in real time</span>
       </h1>
       <p className="mb-10 max-w-2xl text-lg text-gray-400">
-        FlowCNH is a real-time payment streaming protocol powered by AxCNH.
-        Employers fund once — workers receive second-by-second. Gasless
-        withdrawals. Idle yield via dForce. No banks, no delays.
+        FlowCNH turns cross-border contractor payroll into a live on-chain CNH
+        flow. Employers fund once, workers watch balances tick up
+        second-by-second, and the payout rail is built for the Asia-facing CNH
+        corridor on Conflux eSpace.
       </p>
+
+      {!HAS_OFFICIAL_AXCNH_CONFIG && (
+        <div className="mb-8 max-w-3xl rounded-2xl border border-yellow-500/30 bg-yellow-500/10 px-5 py-4 text-left text-sm text-yellow-100">
+          This public demo is currently connected to a testnet {STREAM_ASSET_LABEL},
+          not the official AxCNH mainnet contract. The live AxCNH address and
+          integration notes are documented in the funding page and README.
+        </div>
+      )}
 
       {/* CTA */}
       <div className="flex gap-4">
@@ -46,16 +60,16 @@ export default function Home() {
           <div className="mb-3 text-3xl">&#9889;</div>
           <h3 className="mb-2 text-lg font-semibold">Real-Time Streaming</h3>
           <p className="text-sm text-gray-400">
-            Payments accrue every second. Workers withdraw any time — no batch
-            runs, no waiting.
+            Payments visibly accrue every second. Open employer and worker
+            dashboards side by side and the worker balance keeps ticking.
           </p>
         </div>
         <div className="card text-left">
           <div className="mb-3 text-3xl">&#127793;</div>
-          <h3 className="mb-2 text-lg font-semibold">Idle Yield via dForce</h3>
+          <h3 className="mb-2 text-lg font-semibold">dForce Yield {YIELD_PHASE_LABEL}</h3>
           <p className="text-sm text-gray-400">
-            Unstreamed balances earn yield in dForce Unitus. 80% goes to
-            workers, 20% to protocol.
+            The yield layer is scoped as the next milestone. The current demo
+            focuses on verified streaming behavior and real asset integration.
           </p>
         </div>
         <div className="card text-left">
@@ -73,9 +87,9 @@ export default function Home() {
         <h2 className="mb-12 text-3xl font-bold">How It Works</h2>
         <div className="grid gap-8 sm:grid-cols-4">
           {[
-            { step: "1", title: "Fund", desc: "Employer deposits AxCNH (or USDT from any chain)" },
-            { step: "2", title: "Stream", desc: "Payment accrues second-by-second to the worker" },
-            { step: "3", title: "Earn", desc: "Idle funds generate yield in dForce Unitus" },
+            { step: "1", title: "Fund", desc: `Employer funds a stream with ${STREAM_ASSET_LABEL}` },
+            { step: "2", title: "Stream", desc: "Worker balance accrues second-by-second on screen" },
+            { step: "3", title: "Settle", desc: "Recipient withdraws any unlocked balance at any time" },
             { step: "4", title: "Claim", desc: "Worker withdraws anytime — gas is sponsored" },
           ].map((item) => (
             <div key={item.step} className="text-center">
@@ -94,9 +108,12 @@ export default function Home() {
         <p className="mb-6 text-sm text-gray-500">Powered by</p>
         <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400">
           <span className="rounded-lg border border-gray-800 px-4 py-2">Conflux eSpace</span>
-          <span className="rounded-lg border border-gray-800 px-4 py-2">AxCNH</span>
-          <span className="rounded-lg border border-gray-800 px-4 py-2">dForce Unitus</span>
-          <span className="rounded-lg border border-gray-800 px-4 py-2">Meson.fi</span>
+          <span className="rounded-lg border border-gray-800 px-4 py-2">
+            {HAS_OFFICIAL_AXCNH_CONFIG ? "AxCNH" : "CNH corridor demo"}
+          </span>
+          <span className="rounded-lg border border-gray-800 px-4 py-2">
+            dForce {YIELD_PHASE_LABEL}
+          </span>
           <span className="rounded-lg border border-gray-800 px-4 py-2">Fee Sponsorship</span>
         </div>
       </div>
