@@ -8,14 +8,15 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { HAS_OFFICIAL_AXCNH_CONFIG, STREAM_ASSET_LABEL } from "@/lib/demoConfig";
 
 export default function Dashboard() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
 
   // 1. Read nextStreamId to know how many streams exist
-  const { data: nextStreamId } = useReadContract({
+  // Force read on chain 71 (Conflux eSpace Testnet) regardless of wallet chain
+  const { data: nextStreamId, error: nextStreamError } = useReadContract({
     address: VAULT_ADDRESS as `0x${string}`,
     abi: VAULT_ABI,
     functionName: "nextStreamId",
-    query: { enabled: isConnected },
+    chainId: 71,
   });
 
   const totalStreams = nextStreamId ? Number(nextStreamId) - 1 : 0; // IDs start at 1
@@ -33,16 +34,15 @@ export default function Dashboard() {
   );
 
   const { data: allStreamResults } = useReadContracts({
-    contracts: streamContracts,
+    contracts: streamContracts.map((c) => ({ ...c, chainId: 71 })),
     query: {
       enabled: totalStreams > 0,
       refetchInterval: 5000,
     },
   });
 
-  // 3. Filter to streams where current user is sender OR recipient
-  const myStreams = useMemo(() => {
-    if (!allStreamResults || !address) return [];
+  const allStreams = useMemo(() => {
+    if (!allStreamResults) return [];
 
     const result: { streamId: bigint; stream: any; isEmployer: boolean }[] = [];
 
@@ -50,22 +50,37 @@ export default function Dashboard() {
       const r = allStreamResults[i];
       if (r.status !== "success") continue;
 
-      const stream = r.result as any;
-      const sender = (stream.sender ?? stream[0])?.toLowerCase();
-      const recipient = (stream.recipient ?? stream[1])?.toLowerCase();
-      const userAddr = address.toLowerCase();
-
-      if (sender === userAddr || recipient === userAddr) {
-        result.push({
-          streamId: BigInt(i + 1),
-          stream,
-          isEmployer: sender === userAddr,
-        });
-      }
+      result.push({
+        streamId: BigInt(i + 1),
+        stream: r.result as any,
+        isEmployer: false,
+      });
     }
 
     return result;
-  }, [allStreamResults, address]);
+  }, [allStreamResults]);
+
+  // 3. Filter to streams where current user is sender OR recipient
+  const myStreams = useMemo(() => {
+    if (!address) return [];
+
+    const userAddr = address.toLowerCase();
+
+    return allStreams
+      .map(({ streamId, stream }) => {
+        const sender = (stream.sender ?? stream[0])?.toLowerCase();
+        const recipient = (stream.recipient ?? stream[1])?.toLowerCase();
+
+        if (sender !== userAddr && recipient !== userAddr) return null;
+
+        return {
+          streamId,
+          stream,
+          isEmployer: sender === userAddr,
+        };
+      })
+      .filter((item): item is { streamId: bigint; stream: any; isEmployer: boolean } => item !== null);
+  }, [allStreams, address]);
 
   if (!isConnected) {
     return (
@@ -81,6 +96,7 @@ export default function Dashboard() {
 
   const sentStreams = myStreams.filter((s) => s.isEmployer);
   const receivedStreams = myStreams.filter((s) => !s.isEmployer);
+  const showNetworkStreams = myStreams.length === 0 && allStreams.length > 0;
 
   return (
     <div>
@@ -89,7 +105,9 @@ export default function Dashboard() {
         <p className="mt-1 text-gray-400">
           {myStreams.length > 0
             ? `${sentStreams.length} sent, ${receivedStreams.length} received`
-            : "No streams yet"}
+            : allStreams.length > 0
+              ? `${allStreams.length} live stream${allStreams.length === 1 ? "" : "s"} on testnet`
+              : "No streams yet"}
         </p>
         <p className="mt-3 max-w-3xl text-sm text-gray-500">
           Demo tip: open this page in two windows, one with the employer wallet
@@ -102,6 +120,10 @@ export default function Dashboard() {
             the official AxCNH mainnet contract.
           </p>
         )}
+        {/* Debug info — remove after confirming streams work */}
+        <p className="mt-2 text-xs text-gray-600">
+          Chain: {chainId} | Vault: {VAULT_ADDRESS.slice(0,10)}... | nextStreamId: {nextStreamId?.toString() ?? "null"} | totalStreams: {totalStreams} | error: {nextStreamError?.message?.slice(0,80) ?? "none"}
+        </p>
       </div>
 
       {myStreams.length > 0 ? (
@@ -165,6 +187,43 @@ export default function Dashboard() {
               </div>
             </section>
           )}
+        </div>
+      ) : showNetworkStreams ? (
+        <div className="space-y-6">
+          <div className="card text-center">
+            <h2 className="mb-2 text-xl font-semibold">No streams for this wallet</h2>
+            <p className="text-gray-400">
+              The connected address is not the sender or recipient of the current
+              testnet streams, so showing all live network streams below instead.
+            </p>
+          </div>
+
+          <section>
+            <h2 className="mb-4 text-lg font-semibold text-gray-300">
+              Live Network Streams
+            </h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {allStreams.map(({ streamId, stream }) => (
+                <StreamCard
+                  key={streamId.toString()}
+                  streamId={streamId}
+                  stream={{
+                    sender: stream.sender ?? stream[0],
+                    recipient: stream.recipient ?? stream[1],
+                    asset: stream.asset ?? stream[2],
+                    ratePerSecond: stream.ratePerSecond ?? stream[3],
+                    startTime: stream.startTime ?? stream[4],
+                    stopTime: stream.stopTime ?? stream[5],
+                    totalDeposited: stream.totalDeposited ?? stream[7],
+                    totalClaimed: stream.totalClaimed ?? stream[8],
+                    status: Number(stream.status ?? stream[9]),
+                    yieldEnabled: stream.yieldEnabled ?? stream[10],
+                  }}
+                  isEmployer={false}
+                />
+              ))}
+            </div>
+          </section>
         </div>
       ) : (
         <div className="card flex flex-col items-center py-16 text-center">
