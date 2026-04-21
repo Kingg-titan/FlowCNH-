@@ -22,6 +22,7 @@ FlowCNH is the first real-time payment streaming protocol on Conflux eSpace and 
 
 ## Team
 
+- **Ebuka Egbunike** — Smart Contract & Full-Stack Developer (GitHub: [@Kingg-titan](https://github.com/Kingg-titan))
 
 ## Problem Statement
 
